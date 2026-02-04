@@ -2,73 +2,68 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendario Barça - Live</title>
+    <title>Diagnóstico Calendario</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #001a3d; color: white; text-align: center; padding: 20px; }
-        h1 { color: #edbb00; text-shadow: 2px 2px 4px #000; }
-        #contenedor { display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px; }
-        .match-card { background: white; color: #333; padding: 15px; border-radius: 12px; width: 95%; max-width: 400px; display: flex; align-items: center; justify-content: space-between; border-left: 10px solid #a50044; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
-        .logo { width: 45px; height: 45px; object-fit: contain; }
-        .info { flex: 1; padding: 0 10px; }
-        .fecha { font-size: 0.85rem; color: #666; font-weight: bold; }
-        .equipos { font-weight: bold; color: #004d98; margin: 5px 0; font-size: 1rem; }
-        .comp { font-size: 0.7rem; color: #a50044; font-weight: bold; }
+        body { font-family: sans-serif; background: #001a3d; color: white; padding: 20px; text-align: center; }
+        .debug-box { background: #000; color: #0f0; padding: 15px; text-align: left; font-family: monospace; font-size: 12px; border-radius: 8px; margin-top: 20px; overflow-x: auto; }
+        .match-card { background: white; color: #333; padding: 10px; border-radius: 8px; margin: 10px auto; max-width: 400px; display: flex; justify-content: space-between; align-items: center; }
+        img { width: 30px; }
     </style>
 </head>
 <body>
-    <h1>🔵🔴 PRÓXIMOS PARTIDOS 🔴🔵</h1>
-    <div id="contenedor">Sincronizando con el calendario 2026...</div>
+    <h1>🔍 ESTADO DEL CALENDARIO</h1>
+    <div id="status">Iniciando diagnóstico...</div>
+    <div id="resultados"></div>
+    <div id="debug" class="debug-box">Esperando respuesta del servidor...</div>
 
     <script>
-        const apiKey = "2618ce8355bed488c07e92dd85339019";
-        const teamId = 81;
-        const hoy = new Date();
+        async function test() {
+            const status = document.getElementById('status');
+            const debug = document.getElementById('debug');
+            const resultados = document.getElementById('resultados');
+            const key = "2618ce8355bed488c07e92dd85339019";
 
-        async function obtenerDatos(temporada) {
-            const url = `https://v3.football.api-sports.io/fixtures?team=${teamId}&season=${temporada}`;
-            const res = await fetch(url, {
-                headers: { "x-rapidapi-key": apiKey, "x-rapidapi-host": "v3.football.api-sports.io" }
-            });
-            const json = await res.json();
-            return json.response || [];
-        }
-
-        async function iniciar() {
-            const lista = document.getElementById('contenedor');
             try {
-                // Probamos 2025 y 2026 a la vez para no fallar
-                const [data25, data26] = await Promise.all([obtenerDatos(2025), obtenerDatos(2026)]);
-                const total = [...data25, ...data26];
+                status.innerHTML = "Consultando temporada 2025...";
+                // Probamos una consulta más amplia: Partidos del Barça en 2025
+                const resp = await fetch('https://v3.football.api-sports.io/fixtures?team=81&season=2025', {
+                    headers: { "x-rapidapi-key": key, "x-rapidapi-host": "v3.football.api-sports.io" }
+                });
+                
+                const data = await resp.json();
+                
+                // Mostramos el "secreto" de la API en el cuadro negro
+                debug.innerHTML = "RESPUESTA API: " + JSON.stringify(data).substring(0, 500) + "...";
 
-                // Filtramos partidos de hoy en adelante
-                const proximos = total
-                    .filter(p => new Date(p.fixture.date) > hoy)
-                    .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date))
-                    .slice(0, 8);
+                if (data.response && data.response.length > 0) {
+                    status.innerHTML = "✅ ¡Datos encontrados! Filtrando próximos...";
+                    const hoy = new Date();
+                    const proximos = data.response
+                        .filter(p => new Date(p.fixture.date) > hoy)
+                        .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date))
+                        .slice(0, 5);
 
-                if (proximos.length === 0) {
-                    lista.innerHTML = "📅 No hay partidos pendientes encontrados en el servidor.";
-                    return;
+                    if(proximos.length === 0) {
+                        status.innerHTML = "⚠️ API responde, pero no hay partidos futuros en 2025.";
+                    } else {
+                        status.innerHTML = "Partidos encontrados:";
+                        resultados.innerHTML = proximos.map(p => `
+                            <div class="match-card">
+                                <img src="${p.teams.home.logo}">
+                                <div>${p.teams.home.name} vs ${p.teams.away.name}<br><small>${new Date(p.fixture.date).toLocaleString()}</small></div>
+                                <img src="${p.teams.away.logo}">
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    status.innerHTML = "❌ El servidor dice que no hay partidos para el ID 81.";
                 }
 
-                lista.innerHTML = proximos.map(p => `
-                    <div class="match-card">
-                        <img src="${p.teams.home.logo}" class="logo">
-                        <div class="info">
-                            <div class="fecha">${new Date(p.fixture.date).toLocaleString('es-ES', {weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}</div>
-                            <div class="equipos">${p.teams.home.name} <br>vs<br> ${p.teams.away.name}</div>
-                            <div class="comp">${p.league.name}</div>
-                        </div>
-                        <img src="${p.teams.away.logo}" class="logo">
-                    </div>
-                `).join('');
-
             } catch (e) {
-                lista.innerHTML = "❌ Error de conexión.";
+                status.innerHTML = "❌ Error de red: " + e.message;
             }
         }
-        iniciar();
+        test();
     </script>
 </body>
 </html>
