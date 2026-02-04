@@ -5,50 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendario Barça - Live</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #001a3d; color: white; text-align: center; padding: 20px; }
-        h1 { color: #edbb00; text-shadow: 2px 2px 4px #000; margin-bottom: 30px; }
-        .match-card { background: white; color: #333; padding: 20px; border-radius: 15px; width: 95%; max-width: 450px; margin: 15px auto; border-left: 12px solid #a50044; box-shadow: 0 6px 15px rgba(0,0,0,0.5); }
-        .fecha { font-size: 0.9rem; color: #666; font-weight: bold; text-transform: capitalize; }
-        .equipos { font-weight: bold; color: #004d98; font-size: 1.2rem; margin: 10px 0; line-height: 1.4; }
-        .liga { font-size: 0.85rem; color: #a50044; font-weight: bold; border-top: 1px solid #eee; pt: 8px; margin-top: 8px; display: block; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #001a3d; color: white; padding: 20px; margin: 0; }
+        h1 { text-align: center; color: #ffcc00; text-shadow: 2px 2px 4px #000; }
+        #partidos { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 20px; }
+        .match-card { background: white; color: #333; padding: 15px; border-radius: 12px; width: 320px; border-left: 8px solid #a50044; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .team-logo { width: 50px; height: 50px; object-fit: contain; }
+        .info { text-align: center; flex: 1; padding: 0 10px; }
+        .date { font-size: 0.85rem; color: #666; font-weight: bold; }
+        .teams { font-weight: bold; margin: 5px 0; font-size: 1rem; color: #004d98; }
+        .loading-text { text-align: center; color: #ffcc00; font-style: italic; }
     </style>
 </head>
 <body>
     <h1>🔵🔴 PRÓXIMOS PARTIDOS 🔴🔵</h1>
-    <div id="calendario">Cargando el calendario culé...</div>
+    <div id="partidos" class="loading-text">Conectando con la base de datos deportiva...</div>
 
     <script>
-        async function cargarCalendario() {
-            const contenedor = document.getElementById('calendario');
-            try {
-                // ID 133702 es el código exacto del FC Barcelona en esta API
-                const res = await fetch('https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=133702');
-                const data = await res.json();
+        const API_KEY = "2618ce8355bed488c07e92dd85339019";
+        const BARCA_ID = 81; // ID oficial del FC Barcelona
 
-                if (!data.events) {
-                    contenedor.innerHTML = "📅 No hay partidos próximos registrados en este momento.";
+        async function cargarCalendario() {
+            const contenedor = document.getElementById('partidos');
+            try {
+                const res = await fetch(`https://v3.football.api-sports.io/fixtures?team=${BARCA_ID}&next=10`, {
+                    headers: { "x-rapidapi-key": API_KEY, "x-rapidapi-host": "v3.football.api-sports.io" }
+                });
+                const data = await res.json();
+                
+                if (!data.response || data.response.length === 0) {
+                    contenedor.innerHTML = "<p>No hay partidos próximos programados en este momento.</p>";
                     return;
                 }
 
-                contenedor.innerHTML = data.events.map(evento => {
-                    // Ajuste de fecha para que sea legible
-                    const opciones = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' };
-                    const fecha = evento.strTimestamp 
-                        ? new Date(evento.strTimestamp).toLocaleString('es-ES', opciones) 
-                        : `${evento.dateEvent} - ${evento.strTime}`;
-
+                contenedor.innerHTML = data.response.map(m => {
+                    const fecha = new Date(m.fixture.date).toLocaleString('es-ES', {
+                        weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                    });
+                    
                     return `
                         <div class="match-card">
-                            <div class="fecha">${fecha}</div>
-                            <div class="equipos">${evento.strEvent.replace(' vs ', '<br>vs<br>')}</div>
-                            <span class="liga">${evento.strLeague}</span>
-                        </div>
-                    `;
+                            <img src="${m.teams.home.logo}" class="team-logo">
+                            <div class="info">
+                                <div class="date">${fecha}</div>
+                                <div class="teams">${m.teams.home.name} <br>vs<br> ${m.teams.away.name}</div>
+                                <div style="font-size:0.7rem; color:#a50044;">${m.league.name}</div>
+                            </div>
+                            <img src="${m.teams.away.logo}" class="team-logo">
+                        </div>`;
                 }).join('');
-            } catch (error) {
-                contenedor.innerHTML = "❌ Error al conectar con el servidor de deportes.";
+
+            } catch (e) {
+                contenedor.innerHTML = "<p>Error al conectar. Intenta recargar la página en unos segundos.</p>";
             }
         }
+
         cargarCalendario();
     </script>
 </body>
