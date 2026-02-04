@@ -6,45 +6,51 @@
     <title>Calendario Barça - Live</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #001a3d; color: white; text-align: center; padding: 20px; }
-        h1 { color: #edbb00; text-shadow: 2px 2px 4px #000; }
-        .match-card { background: white; color: #333; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 15px auto; display: flex; align-items: center; justify-content: space-between; border-left: 10px solid #a50044; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
-        .info { flex: 1; }
-        .fecha { font-size: 0.9rem; color: #666; font-weight: bold; }
-        .equipos { font-weight: bold; color: #004d98; font-size: 1.1rem; margin: 5px 0; }
+        h1 { color: #edbb00; text-shadow: 2px 2px 4px #000; margin-bottom: 30px; }
+        .match-card { background: white; color: #333; padding: 20px; border-radius: 15px; width: 95%; max-width: 450px; margin: 15px auto; border-left: 12px solid #a50044; box-shadow: 0 6px 15px rgba(0,0,0,0.5); }
+        .fecha { font-size: 0.9rem; color: #666; font-weight: bold; text-transform: capitalize; }
+        .equipos { font-weight: bold; color: #004d98; font-size: 1.2rem; margin: 10px 0; line-height: 1.4; }
+        .liga { font-size: 0.85rem; color: #a50044; font-weight: bold; border-top: 1px solid #eee; pt: 8px; margin-top: 8px; display: block; }
     </style>
 </head>
 <body>
     <h1>🔵🔴 PRÓXIMOS PARTIDOS 🔴🔵</h1>
-    <div id="calendario">Cargando próximos encuentros...</div>
+    <div id="calendario">Cargando el calendario culé...</div>
 
     <script>
-        // Usamos una fuente de datos alternativa más flexible
         async function cargarCalendario() {
             const contenedor = document.getElementById('calendario');
             try {
-                // Consultamos a una base de datos de deportes abierta
-                const res = await fetch('https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=133739');
+                // ID 133702 es el código exacto del FC Barcelona en esta API
+                const res = await fetch('https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=133702');
                 const data = await res.json();
 
                 if (!data.events) {
-                    contenedor.innerHTML = "No hay partidos próximos programados en este momento.";
+                    contenedor.innerHTML = "📅 No hay partidos próximos registrados en este momento.";
                     return;
                 }
 
-                contenedor.innerHTML = data.events.map(evento => `
-                    <div class="match-card">
-                        <div class="info">
-                            <div class="fecha">${evento.strTimestamp ? new Date(evento.strTimestamp).toLocaleString('es-ES', {weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'}) : evento.dateEvent}</div>
-                            <div class="equipos">${evento.strEvent}</div>
-                            <div style="font-size:0.8rem; color:#a50044; font-weight:bold;">${evento.strLeague}</div>
+                contenedor.innerHTML = data.events.map(evento => {
+                    // Ajuste de fecha para que sea legible
+                    const opciones = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' };
+                    const fecha = evento.strTimestamp 
+                        ? new Date(evento.strTimestamp).toLocaleString('es-ES', opciones) 
+                        : `${evento.dateEvent} - ${evento.strTime}`;
+
+                    return `
+                        <div class="match-card">
+                            <div class="fecha">${fecha}</div>
+                            <div class="equipos">${evento.strEvent.replace(' vs ', '<br>vs<br>')}</div>
+                            <span class="liga">${evento.strLeague}</span>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } catch (error) {
-                contenedor.innerHTML = "Error al cargar el calendario. Por favor, intenta de nuevo.";
+                contenedor.innerHTML = "❌ Error al conectar con el servidor de deportes.";
             }
         }
         cargarCalendario();
     </script>
 </body>
 </html>
+
