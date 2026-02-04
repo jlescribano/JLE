@@ -2,68 +2,49 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Diagnóstico Calendario</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario Barça - Live</title>
     <style>
-        body { font-family: sans-serif; background: #001a3d; color: white; padding: 20px; text-align: center; }
-        .debug-box { background: #000; color: #0f0; padding: 15px; text-align: left; font-family: monospace; font-size: 12px; border-radius: 8px; margin-top: 20px; overflow-x: auto; }
-        .match-card { background: white; color: #333; padding: 10px; border-radius: 8px; margin: 10px auto; max-width: 400px; display: flex; justify-content: space-between; align-items: center; }
-        img { width: 30px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #001a3d; color: white; text-align: center; padding: 20px; }
+        h1 { color: #edbb00; text-shadow: 2px 2px 4px #000; }
+        .match-card { background: white; color: #333; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 15px auto; display: flex; align-items: center; justify-content: space-between; border-left: 10px solid #a50044; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        .info { flex: 1; }
+        .fecha { font-size: 0.9rem; color: #666; font-weight: bold; }
+        .equipos { font-weight: bold; color: #004d98; font-size: 1.1rem; margin: 5px 0; }
     </style>
 </head>
 <body>
-    <h1>🔍 ESTADO DEL CALENDARIO</h1>
-    <div id="status">Iniciando diagnóstico...</div>
-    <div id="resultados"></div>
-    <div id="debug" class="debug-box">Esperando respuesta del servidor...</div>
+    <h1>🔵🔴 PRÓXIMOS PARTIDOS 🔴🔵</h1>
+    <div id="calendario">Cargando próximos encuentros...</div>
 
     <script>
-        async function test() {
-            const status = document.getElementById('status');
-            const debug = document.getElementById('debug');
-            const resultados = document.getElementById('resultados');
-            const key = "2618ce8355bed488c07e92dd85339019";
-
+        // Usamos una fuente de datos alternativa más flexible
+        async function cargarCalendario() {
+            const contenedor = document.getElementById('calendario');
             try {
-                status.innerHTML = "Consultando temporada 2025...";
-                // Probamos una consulta más amplia: Partidos del Barça en 2025
-                const resp = await fetch('https://v3.football.api-sports.io/fixtures?team=81&season=2025', {
-                    headers: { "x-rapidapi-key": key, "x-rapidapi-host": "v3.football.api-sports.io" }
-                });
-                
-                const data = await resp.json();
-                
-                // Mostramos el "secreto" de la API en el cuadro negro
-                debug.innerHTML = "RESPUESTA API: " + JSON.stringify(data).substring(0, 500) + "...";
+                // Consultamos a una base de datos de deportes abierta
+                const res = await fetch('https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=133739');
+                const data = await res.json();
 
-                if (data.response && data.response.length > 0) {
-                    status.innerHTML = "✅ ¡Datos encontrados! Filtrando próximos...";
-                    const hoy = new Date();
-                    const proximos = data.response
-                        .filter(p => new Date(p.fixture.date) > hoy)
-                        .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date))
-                        .slice(0, 5);
-
-                    if(proximos.length === 0) {
-                        status.innerHTML = "⚠️ API responde, pero no hay partidos futuros en 2025.";
-                    } else {
-                        status.innerHTML = "Partidos encontrados:";
-                        resultados.innerHTML = proximos.map(p => `
-                            <div class="match-card">
-                                <img src="${p.teams.home.logo}">
-                                <div>${p.teams.home.name} vs ${p.teams.away.name}<br><small>${new Date(p.fixture.date).toLocaleString()}</small></div>
-                                <img src="${p.teams.away.logo}">
-                            </div>
-                        `).join('');
-                    }
-                } else {
-                    status.innerHTML = "❌ El servidor dice que no hay partidos para el ID 81.";
+                if (!data.events) {
+                    contenedor.innerHTML = "No hay partidos próximos programados en este momento.";
+                    return;
                 }
 
-            } catch (e) {
-                status.innerHTML = "❌ Error de red: " + e.message;
+                contenedor.innerHTML = data.events.map(evento => `
+                    <div class="match-card">
+                        <div class="info">
+                            <div class="fecha">${evento.strTimestamp ? new Date(evento.strTimestamp).toLocaleString('es-ES', {weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'}) : evento.dateEvent}</div>
+                            <div class="equipos">${evento.strEvent}</div>
+                            <div style="font-size:0.8rem; color:#a50044; font-weight:bold;">${evento.strLeague}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                contenedor.innerHTML = "Error al cargar el calendario. Por favor, intenta de nuevo.";
             }
         }
-        test();
+        cargarCalendario();
     </script>
 </body>
 </html>
