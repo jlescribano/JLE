@@ -11,71 +11,64 @@
         .match-card { background: white; color: #333; padding: 15px; border-radius: 12px; width: 95%; max-width: 400px; display: flex; align-items: center; justify-content: space-between; border-left: 10px solid #a50044; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
         .logo { width: 45px; height: 45px; object-fit: contain; }
         .info { flex: 1; padding: 0 10px; }
-        .fecha { font-size: 0.85rem; color: #666; font-weight: bold; text-transform: capitalize; }
+        .fecha { font-size: 0.85rem; color: #666; font-weight: bold; }
         .equipos { font-weight: bold; color: #004d98; margin: 5px 0; font-size: 1rem; }
         .comp { font-size: 0.7rem; color: #a50044; font-weight: bold; }
     </style>
 </head>
 <body>
     <h1>🔵🔴 PRÓXIMOS PARTIDOS 🔴🔵</h1>
-    <div id="contenedor">Buscando en todas las competiciones...</div>
+    <div id="contenedor">Sincronizando con el calendario 2026...</div>
 
     <script>
-        async function buscarPartidos() {
+        const apiKey = "2618ce8355bed488c07e92dd85339019";
+        const teamId = 81;
+        const hoy = new Date();
+
+        async function obtenerDatos(temporada) {
+            const url = `https://v3.football.api-sports.io/fixtures?team=${teamId}&season=${temporada}`;
+            const res = await fetch(url, {
+                headers: { "x-rapidapi-key": apiKey, "x-rapidapi-host": "v3.football.api-sports.io" }
+            });
+            const json = await res.json();
+            return json.response || [];
+        }
+
+        async function iniciar() {
             const lista = document.getElementById('contenedor');
-            const apiKey = "2618ce8355bed488c07e92dd85339019";
-            const hoy = new Date();
-            
             try {
-                // Buscamos partidos para el equipo 81 (Barça) sin filtrar por temporada para ver qué nos da
-                const url = `https://v3.football.api-sports.io/fixtures?team=81&last=2&next=10`;
-                
-                // NOTA: Si la API sigue dando error con 'next', usaremos la fecha de hoy
-                const urlAlternativa = `https://v3.football.api-sports.io/fixtures?team=81&season=2025`;
+                // Probamos 2025 y 2026 a la vez para no fallar
+                const [data25, data26] = await Promise.all([obtenerDatos(2025), obtenerDatos(2026)]);
+                const total = [...data25, ...data26];
 
-                const response = await fetch(urlAlternativa, {
-                    method: 'GET',
-                    headers: {
-                        'x-rapidapi-key': apiKey,
-                        'x-rapidapi-host': 'v3.football.api-sports.io'
-                    }
-                });
-
-                const data = await response.json();
-
-                // Filtramos partidos desde ayer para asegurar que no se pierda el de hoy si lo hubiera
-                const ayer = new Date(hoy);
-                ayer.setDate(hoy.getDate() - 1);
-
-                const proximos = data.response
-                    .filter(p => new Date(p.fixture.date) > ayer)
+                // Filtramos partidos de hoy en adelante
+                const proximos = total
+                    .filter(p => new Date(p.fixture.date) > hoy)
                     .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date))
-                    .slice(0, 6);
+                    .slice(0, 8);
 
                 if (proximos.length === 0) {
-                    lista.innerHTML = "📅 No hay partidos registrados. Probando actualización...";
-                    // Si falla 2025, intentamos 2026 automáticamente
-                    setTimeout(() => window.location.search = "?alt=2026", 2000);
+                    lista.innerHTML = "📅 No hay partidos pendientes encontrados en el servidor.";
                     return;
                 }
 
-                lista.innerHTML = proximos.map(partido => `
+                lista.innerHTML = proximos.map(p => `
                     <div class="match-card">
-                        <img src="${partido.teams.home.logo}" class="logo">
+                        <img src="${p.teams.home.logo}" class="logo">
                         <div class="info">
-                            <div class="fecha">${new Date(partido.fixture.date).toLocaleString('es-ES', {weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}</div>
-                            <div class="equipos">${partido.teams.home.name} <br>vs<br> ${partido.teams.away.name}</div>
-                            <div class="comp">${partido.league.name}</div>
+                            <div class="fecha">${new Date(p.fixture.date).toLocaleString('es-ES', {weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}</div>
+                            <div class="equipos">${p.teams.home.name} <br>vs<br> ${p.teams.away.name}</div>
+                            <div class="comp">${p.league.name}</div>
                         </div>
-                        <img src="${partido.teams.away.logo}" class="logo">
+                        <img src="${p.teams.away.logo}" class="logo">
                     </div>
                 `).join('');
 
-            } catch (error) {
-                lista.innerHTML = "❌ Error al conectar. Inténtalo de nuevo.";
+            } catch (e) {
+                lista.innerHTML = "❌ Error de conexión.";
             }
         }
-        buscarPartidos();
+        iniciar();
     </script>
 </body>
 </html>
