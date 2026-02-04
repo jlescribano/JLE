@@ -1,5 +1,71 @@
 <!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario Barça - Live</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #001a3d; color: white; text-align: center; padding: 20px; margin: 0; }
+        h1 { color: #edbb00; text-shadow: 2px 2px 5px rgba(0,0,0,0.7); }
+        #contenedor { display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px; }
+        .match-card { background: white; color: #333; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; display: flex; align-items: center; justify-content: space-between; border-left: 10px solid #a50044; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        .logo { width: 45px; height: 45px; object-fit: contain; }
+        .info { flex: 1; padding: 0 10px; }
+        .fecha { font-size: 0.8rem; color: #666; font-weight: bold; }
+        .equipos { font-weight: bold; color: #004d98; margin: 5px 0; font-size: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>🔵🔴 CALENDARIO CULÉ 🔴🔵</h1>
+    <div id="contenedor">🔄 Conectando con los servidores de la Liga...</div>
 
-<html lang="es"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Calendario Barça - Live</title> <style> body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #001a3d; color: white; padding: 20px; margin: 0; display: flex; flex-direction: column; align-items: center; } h1 { color: #ffcc00; text-shadow: 2px 2px 4px #000; } #partidos { width: 100%; max-width: 500px; margin-top: 20px; } .match-card { background: white; color: #333; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; border-left: 8px solid #a50044; box-shadow: 0 4px 8px rgba(0,0,0,0.3); } .team-logo { width: 45px; height: 45px; object-fit: contain; } .info { text-align: center; flex: 1; padding: 0 10px; } .date { font-size: 0.8rem; color: #666; font-weight: bold; text-transform: capitalize; } .teams { font-weight: bold; margin: 5px 0; color: #004d98; font-size: 1rem; } </style> </head> <body> <h1>🔵🔴 PRÓXIMOS PARTIDOS 🔴🔵</h1> <div id="partidos">Cargando calendario oficial...</div>
+    <script>
+        async function buscarPartidos() {
+            const lista = document.getElementById('contenedor');
+            const apiKey = "2618ce8355bed488c07e92dd85339019";
+            
+            try {
+                // Añadimos un número aleatorio al final de la URL para saltarnos la caché
+                const url = `https://v3.football.api-sports.io/fixtures?team=81&next=5&t=${new Date().getTime()}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'x-rapidapi-key': apiKey,
+                        'x-rapidapi-host': 'v3.football.api-sports.io'
+                    }
+                });
 
-</body> </html>
+                const data = await response.json();
+
+                if (data.errors && Object.keys(data.errors).length > 0) {
+                    lista.innerHTML = "⚠️ Error de API: " + JSON.stringify(data.errors);
+                    return;
+                }
+
+                if (!data.response || data.response.length === 0) {
+                    lista.innerHTML = "📅 No se han encontrado partidos próximos.";
+                    return;
+                }
+
+                lista.innerHTML = data.response.map(partido => `
+                    <div class="match-card">
+                        <img src="${partido.teams.home.logo}" class="logo">
+                        <div class="info">
+                            <div class="fecha">${new Date(partido.fixture.date).toLocaleString('es-ES', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</div>
+                            <div class="equipos">${partido.teams.home.name} <br>vs<br> ${partido.teams.away.name}</div>
+                        </div>
+                        <img src="${partido.teams.away.logo}" class="logo">
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                lista.innerHTML = "❌ Error crítico: No se pudo conectar con el servidor.";
+                console.error(error);
+            }
+        }
+
+        buscarPartidos();
+    </script>
+</body>
+</html>
