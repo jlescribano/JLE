@@ -60,4 +60,21 @@
 
                 div.innerHTML = partidosBarca.map(p => `
                     <div class="match-card">
-                        <img src="https://www.thesports
+                        <img src="https://www.thesportsdb.com/images/media/team/badge/small/vxptqy1421601005.png" class="logo">
+                        <div class="info">
+                            <div class="fecha">${new Date(p.dateEvent + " " + (p.strTime || "21:00")).toLocaleString('es-ES', {weekday:'long', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}</div>
+                            <div class="equipos">${p.strHomeTeam}</div>
+                            <div class="vs">VS</div>
+                            <div class="equipos">${p.strAwayTeam}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (e) {
+                div.innerHTML = "❌ Los servidores están saturados. Refresca en un minuto.";
+            }
+        }
+        cargar();
+    </script>
+</body>
+</html>
