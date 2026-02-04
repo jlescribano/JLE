@@ -8,7 +8,7 @@
         body { font-family: 'Segoe UI', sans-serif; background-color: #001a3d; color: white; text-align: center; padding: 20px; }
         h1 { color: #edbb00; text-shadow: 2px 2px 4px #000; }
         #contenedor { display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px; }
-        .match-card { background: white; color: #333; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; display: flex; align-items: center; justify-content: space-between; border-left: 10px solid #a50044; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        .match-card { background: white; color: #333; padding: 15px; border-radius: 12px; width: 95%; max-width: 400px; display: flex; align-items: center; justify-content: space-between; border-left: 10px solid #a50044; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
         .logo { width: 45px; height: 45px; object-fit: contain; }
         .info { flex: 1; padding: 0 10px; }
         .fecha { font-size: 0.85rem; color: #666; font-weight: bold; text-transform: capitalize; }
@@ -18,7 +18,7 @@
 </head>
 <body>
     <h1>🔵🔴 PRÓXIMOS PARTIDOS 🔴🔵</h1>
-    <div id="contenedor">Actualizando calendario oficial...</div>
+    <div id="contenedor">Buscando en todas las competiciones...</div>
 
     <script>
         async function buscarPartidos() {
@@ -27,10 +27,13 @@
             const hoy = new Date();
             
             try {
-                // Intentamos primero con la temporada actual (2025/26)
-                const url = `https://v3.football.api-sports.io/fixtures?team=81&season=2025`;
+                // Buscamos partidos para el equipo 81 (Barça) sin filtrar por temporada para ver qué nos da
+                const url = `https://v3.football.api-sports.io/fixtures?team=81&last=2&next=10`;
                 
-                const response = await fetch(url, {
+                // NOTA: Si la API sigue dando error con 'next', usaremos la fecha de hoy
+                const urlAlternativa = `https://v3.football.api-sports.io/fixtures?team=81&season=2025`;
+
+                const response = await fetch(urlAlternativa, {
                     method: 'GET',
                     headers: {
                         'x-rapidapi-key': apiKey,
@@ -40,14 +43,19 @@
 
                 const data = await response.json();
 
-                // Filtramos partidos futuros y ordenamos
+                // Filtramos partidos desde ayer para asegurar que no se pierda el de hoy si lo hubiera
+                const ayer = new Date(hoy);
+                ayer.setDate(hoy.getDate() - 1);
+
                 const proximos = data.response
-                    .filter(p => new Date(p.fixture.date) > hoy)
+                    .filter(p => new Date(p.fixture.date) > ayer)
                     .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date))
                     .slice(0, 6);
 
                 if (proximos.length === 0) {
-                    lista.innerHTML = "📅 No se han encontrado partidos pendientes para esta temporada.";
+                    lista.innerHTML = "📅 No hay partidos registrados. Probando actualización...";
+                    // Si falla 2025, intentamos 2026 automáticamente
+                    setTimeout(() => window.location.search = "?alt=2026", 2000);
                     return;
                 }
 
@@ -64,7 +72,7 @@
                 `).join('');
 
             } catch (error) {
-                lista.innerHTML = "❌ Error al conectar. Por favor, recarga la página.";
+                lista.innerHTML = "❌ Error al conectar. Inténtalo de nuevo.";
             }
         }
         buscarPartidos();
